@@ -1,5 +1,5 @@
 -- ============================================
--- 🎯 MENU PRETO/CINZA + AIMBOT GRUDENTO + MAGIC BULLET
+-- 🎯 MENU PRETO/CINZA + AIMBOT + FOV NA CÂMERA
 -- ============================================
 -- 📌 Aperte DELETE para abrir/fechar o menu
 -- ============================================
@@ -510,11 +510,15 @@ y = y + 35
 scroll.CanvasSize = UDim2.new(0, 0, 0, y + 50)
 
 -- ============================================
--- FUNÇÃO FOV CIRCLE
+-- FUNÇÃO FOV CIRCLE (AGORA NA CÂMERA)
 -- ============================================
 
 local function criarFOVCircle()
     if fovCircle then fovCircle:Destroy() end
+    
+    local viewportSize = Camera.ViewportSize
+    local centerX = viewportSize.X / 2
+    local centerY = viewportSize.Y / 2
     
     local circle = Drawing.new("Circle")
     circle.Visible = aimbotConfig.drawFOV
@@ -524,13 +528,24 @@ local function criarFOVCircle()
     circle.Transparency = 0.4
     circle.Filled = false
     circle.NumSides = 30
-    circle.Position = Vector2.new(mouse.X, mouse.Y)
+    circle.Position = Vector2.new(centerX, centerY) -- CENTRALIZADO NA CÂMERA
     
     fovCircle = circle
     return circle
 end
 
 criarFOVCircle()
+
+-- ============================================
+-- ATUALIZA FOV QUANDO A TELA MUDA
+-- ============================================
+
+Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+    if fovCircle then
+        local viewportSize = Camera.ViewportSize
+        fovCircle.Position = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+    end
+end)
 
 -- ============================================
 -- FUNÇÕES DO AIMBOT
@@ -739,8 +754,10 @@ local function updateAimbot()
     local keybindStr = getKeybind()
     aimbotConfig.keybind = keybindStr
     
+    -- FOV CIRCLE - SEMPRE CENTRALIZADO NA CÂMERA
     if fovCircle then
-        fovCircle.Position = Vector2.new(mouse.X, mouse.Y)
+        local viewportSize = Camera.ViewportSize
+        fovCircle.Position = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
         fovCircle.Radius = aimbotConfig.fov
         fovCircle.Visible = aimbotConfig.drawFOV and aimbotConfig.enabled
     end
@@ -881,22 +898,11 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ============================================
--- ATUALIZA FOV QUANDO MOUSE MOVE
--- ============================================
-
-UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        if fovCircle then
-            fovCircle.Position = Vector2.new(input.Position.X, input.Position.Y)
-        end
-    end
-end)
-
--- ============================================
 -- MENSAGEM FINAL
 -- ============================================
 
 print("✅ MENU + AIMBOT GRUDENTO CARREGADO!")
 print("📌 Aperte DELETE para abrir/fechar")
+print("🎯 FOV centralizado na câmera!")
 print("🎯 Segure o botão configurado para ativar o aimbot")
 print("⚙️ Configure tudo no menu!")
