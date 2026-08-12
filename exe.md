@@ -1,431 +1,902 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Aimbot · Silent</title>
-    <!-- Ícone simples (font-awesome) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-        }
+-- ============================================
+-- 🎯 MENU PRETO/CINZA + AIMBOT GRUDENTO + MAGIC BULLET
+-- ============================================
+-- 📌 Aperte DELETE para abrir/fechar o menu
+-- ============================================
 
-        body {
-            background: #0b0d11;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1.5rem;
-        }
+-- ============================================
+-- SERVIÇOS
+-- ============================================
 
-        /* ── painel principal ── */
-        .panel {
-            background: #14181f;
-            width: 100%;
-            max-width: 480px;
-            padding: 2rem 1.8rem 2.2rem;
-            border-radius: 2rem;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(2px);
-            transition: 0.2s ease;
-        }
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local Camera = Workspace.CurrentCamera
 
-        /* cabeçalho */
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 2.2rem;
-        }
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
 
-        .header h1 {
-            color: #eef2f6;
-            font-size: 1.7rem;
-            font-weight: 500;
-            letter-spacing: -0.3px;
-            display: flex;
-            align-items: center;
-            gap: 0.65rem;
-        }
+-- ============================================
+-- CONFIGURAÇÕES DO AIMBOT
+-- ============================================
 
-        .header h1 i {
-            color: #3d7eff;
-            font-size: 1.6rem;
-            filter: drop-shadow(0 0 6px #3d7eff55);
-        }
+local aimbotConfig = {
+    enabled = true,
+    targetPart = "Head",
+    fov = 120,
+    smoothness = 1,
+    drawFOV = true,
+    checkVisible = true,
+    checkAlive = true,
+    teamCheck = true,
+    distance = 500,
+    silent = false,
+    triggerbot = false,
+    esp = false,
+    magicBullet = false,
+    pullStrength = 100,
+    keybind = "MouseButton2",
+}
 
-        .status-badge {
-            background: #1f2a33;
-            padding: 0.3rem 0.9rem;
-            border-radius: 40px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #9aaec9;
-            letter-spacing: 0.3px;
-            border: 1px solid #2a3744;
-            white-space: nowrap;
-        }
+-- ============================================
+-- VARIÁVEIS
+-- ============================================
 
-        .status-badge i {
-            margin-right: 6px;
-            color: #3d7eff;
-        }
+local target = nil
+local lockedTarget = nil
+local fovCircle = nil
+local espObjects = {}
+local keybindHeld = false
 
-        /* ── cards de opções ── */
-        .option-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-            margin: 2.2rem 0 2.8rem;
-        }
+-- ============================================
+-- CRIA A GUI
+-- ============================================
 
-        .option-card {
-            background: #1b2129;
-            border-radius: 1.6rem;
-            padding: 1.2rem 1.4rem 1.4rem;
-            border: 1px solid #2a333e;
-            transition: all 0.15s ease;
-            box-shadow: 0 6px 0 #0e1218;
-        }
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MenuPreto"
+screenGui.Parent = player.PlayerGui
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-        .option-card:hover {
-            border-color: #3d7eff55;
-            background: #1f2832;
-        }
+-- ============================================
+-- MENU PRINCIPAL
+-- ============================================
 
-        .card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.9rem;
-        }
+local menu = Instance.new("Frame")
+menu.Size = UDim2.new(0, 420, 0, 520)
+menu.Position = UDim2.new(0.5, -210, 0.5, -260)
+menu.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+menu.BackgroundTransparency = 0.05
+menu.BorderSizePixel = 1
+menu.BorderColor3 = Color3.fromRGB(60, 60, 60)
+menu.Visible = false
+menu.Parent = screenGui
 
-        .card-header .label {
-            display: flex;
-            align-items: center;
-            gap: 0.7rem;
-            color: #d3deec;
-            font-weight: 500;
-            font-size: 1.1rem;
-        }
+local menuCorner = Instance.new("UICorner")
+menuCorner.CornerRadius = UDim.new(0, 12)
+menuCorner.Parent = menu
 
-        .card-header .label i {
-            font-size: 1.2rem;
-            color: #3d7eff;
-            width: 1.6rem;
-            text-align: center;
-        }
+-- ============================================
+-- TOPO DO MENU
+-- ============================================
 
-        /* toggle switch (estilo único) */
-        .toggle {
-            width: 48px;
-            height: 26px;
-            background: #2a3644;
-            border-radius: 40px;
-            position: relative;
-            cursor: pointer;
-            transition: 0.2s;
-            flex-shrink: 0;
-            border: 1px solid #3b4a5a;
-        }
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 45)
+topBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+topBar.BorderSizePixel = 0
+topBar.Parent = menu
 
-        .toggle.active {
-            background: #1d4ed8;
-            border-color: #3d7eff;
-            box-shadow: 0 0 12px #1d4ed866;
-        }
+local topCorner = Instance.new("UICorner")
+topCorner.CornerRadius = UDim.new(0, 12)
+topCorner.Parent = topBar
 
-        .toggle .knob {
-            width: 20px;
-            height: 20px;
-            background: #eef2f6;
-            border-radius: 50%;
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            transition: 0.2s cubic-bezier(0.34, 1.2, 0.64, 1);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
-        }
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0.6, 0, 1, 0)
+title.Position = UDim2.new(0.05, 0, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "🎯 AIMBOT PREMIUM"
+title.TextColor3 = Color3.fromRGB(220, 220, 220)
+title.TextSize = 18
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Font = Enum.Font.GothamBold
+title.Parent = topBar
 
-        .toggle.active .knob {
-            left: 24px;
-            background: #ffffff;
-        }
+local version = Instance.new("TextLabel")
+version.Size = UDim2.new(0.3, 0, 1, 0)
+version.Position = UDim2.new(0.65, 0, 0, 0)
+version.BackgroundTransparency = 1
+version.Text = "v3.0"
+version.TextColor3 = Color3.fromRGB(120, 120, 120)
+version.TextSize = 12
+version.TextXAlignment = Enum.TextXAlignment.Right
+version.Font = Enum.Font.Gotham
+version.Parent = topBar
 
-        .card-desc {
-            color: #8ca1bb;
-            font-size: 0.85rem;
-            margin-top: 0.2rem;
-            padding-left: 2.4rem;
-            border-left: 2px solid #2a3744;
-            padding-left: 1rem;
-            line-height: 1.4;
-        }
+-- ============================================
+-- BOTÃO FECHAR
+-- ============================================
 
-        .card-desc i {
-            color: #3d7eff;
-            margin-right: 5px;
-            opacity: 0.7;
-        }
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -40, 0, 8)
+closeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+closeBtn.TextSize = 16
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.BorderSizePixel = 0
+closeBtn.Parent = topBar
 
-        /* ── botão de ação ── */
-        .action-btn {
-            background: #1d4ed8;
-            border: none;
-            width: 100%;
-            padding: 1rem 0;
-            border-radius: 3rem;
-            font-weight: 600;
-            font-size: 1.1rem;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.7rem;
-            cursor: pointer;
-            transition: 0.15s;
-            border: 1px solid #3d7eff88;
-            box-shadow: 0 8px 0 #0f2a6b, 0 4px 20px #1d4ed833;
-            letter-spacing: 0.3px;
-        }
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(1, 0)
+closeCorner.Parent = closeBtn
 
-        .action-btn i {
-            font-size: 1.2rem;
-        }
+closeBtn.MouseButton1Click:Connect(function()
+    menu.Visible = false
+end)
 
-        .action-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 4px 0 #0f2a6b;
-        }
+closeBtn.MouseEnter:Connect(function()
+    closeBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+end)
 
-        .action-btn:disabled {
-            opacity: 0.6;
-            transform: translateY(4px);
-            box-shadow: 0 4px 0 #0f2a6b;
-            pointer-events: none;
-        }
+closeBtn.MouseLeave:Connect(function()
+    closeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+end)
 
-        /* rodapé / silent indicator */
-        .silent-footer {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 1.4rem;
-            color: #5f748f;
-            font-size: 0.8rem;
-            align-items: center;
-            gap: 0.5rem;
-            border-top: 1px solid #1f2a33;
-            padding-top: 1.2rem;
-        }
+-- ============================================
+-- SCROLL FRAME
+-- ============================================
 
-        .silent-footer i {
-            color: #3d7eff;
-            font-size: 0.9rem;
-        }
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, 0, 1, -45)
+scroll.Position = UDim2.new(0, 0, 0, 45)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.CanvasSize = UDim2.new(0, 0, 0, 900)
+scroll.ScrollBarThickness = 4
+scroll.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
+scroll.ScrollBarImageTransparency = 0.5
+scroll.Parent = menu
 
-        .silent-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: #3d7eff;
-            border-radius: 10px;
-            margin-right: 4px;
-            box-shadow: 0 0 12px #3d7effaa;
-            transition: 0.3s;
-        }
+local container = Instance.new("Frame")
+container.Size = UDim2.new(1, 0, 0, 850)
+container.BackgroundTransparency = 1
+container.Parent = scroll
 
-        .silent-dot.inactive {
-            background: #4a5f7a;
-            box-shadow: none;
-        }
+-- ============================================
+-- FUNÇÃO CHECKBOX
+-- ============================================
 
-        /* responsivo */
-        @media (max-width: 420px) {
-            .panel { padding: 1.5rem; }
-            .header h1 { font-size: 1.4rem; }
-        }
-    </style>
-</head>
-<body>
-<div class="panel">
-    <!-- cabeçalho -->
-    <div class="header">
-        <h1><i class="fas fa-crosshairs"></i> Aimbot</h1>
-        <span class="status-badge"><i class="fas fa-circle" style="color: #3d7eff;"></i> Silent</span>
-    </div>
+local function criarCheckbox(parent, yPos, texto, estadoInicial)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 32)
+    frame.Position = UDim2.new(0, 0, 0, yPos)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+    
+    local caixa = Instance.new("TextButton")
+    caixa.Size = UDim2.new(0, 18, 0, 18)
+    caixa.Position = UDim2.new(0.03, 0, 0.5, -9)
+    caixa.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    caixa.Text = ""
+    caixa.BorderSizePixel = 1
+    caixa.BorderColor3 = Color3.fromRGB(80, 80, 80)
+    caixa.Parent = frame
+    
+    local caixaCorner = Instance.new("UICorner")
+    caixaCorner.CornerRadius = UDim.new(0, 3)
+    caixaCorner.Parent = caixa
+    
+    local checkMark = Instance.new("TextLabel")
+    checkMark.Size = UDim2.new(1, 0, 1, 0)
+    checkMark.BackgroundTransparency = 1
+    checkMark.Text = "✓"
+    checkMark.TextColor3 = Color3.fromRGB(200, 200, 200)
+    checkMark.TextSize = 14
+    checkMark.Font = Enum.Font.GothamBold
+    checkMark.Visible = estadoInicial or false
+    checkMark.Parent = caixa
+    
+    local textoLabel = Instance.new("TextLabel")
+    textoLabel.Size = UDim2.new(0.85, 0, 1, 0)
+    textoLabel.Position = UDim2.new(0.09, 0, 0, 0)
+    textoLabel.BackgroundTransparency = 1
+    textoLabel.Text = texto
+    textoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    textoLabel.TextSize = 13
+    textoLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textoLabel.Font = Enum.Font.Gotham
+    textoLabel.Parent = frame
+    
+    local estado = estadoInicial or false
+    
+    caixa.MouseButton1Click:Connect(function()
+        estado = not estado
+        checkMark.Visible = estado
+    end)
+    
+    caixa.MouseEnter:Connect(function()
+        caixa.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    end)
+    
+    caixa.MouseLeave:Connect(function()
+        caixa.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    end)
+    
+    return frame, function() return estado end, function(novoEstado)
+        estado = novoEstado
+        checkMark.Visible = estado
+    end
+end
 
-    <!-- opções do menu (aimbot + silent) -->
-    <div class="option-grid">
-        <!-- Aimbot -->
-        <div class="option-card" id="aimbotCard">
-            <div class="card-header">
-                <span class="label"><i class="fas fa-bullseye"></i> Aimbot</span>
-                <div class="toggle" id="aimbotToggle" role="button" tabindex="0" aria-label="Alternar Aimbot">
-                    <div class="knob"></div>
-                </div>
-            </div>
-            <div class="card-desc">
-                <i class="fas fa-arrow-right"></i> Mira assistida · ajuste fino
-            </div>
-        </div>
+-- ============================================
+-- FUNÇÃO DROPDOWN
+-- ============================================
 
-        <!-- Silent (modo silencioso) -->
-        <div class="option-card" id="silentCard">
-            <div class="card-header">
-                <span class="label"><i class="fas fa-ghost"></i> Silent</span>
-                <div class="toggle" id="silentToggle" role="button" tabindex="0" aria-label="Alternar Silent">
-                    <div class="knob"></div>
-                </div>
-            </div>
-            <div class="card-desc">
-                <i class="fas fa-arrow-right"></i> Disparo invisível · sem movimentos bruscos
-            </div>
-        </div>
-    </div>
+local function criarDropdown(parent, yPos, texto, opcoes, valorPadrao)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 32)
+    frame.Position = UDim2.new(0, 0, 0, yPos)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+    
+    local textoLabel = Instance.new("TextLabel")
+    textoLabel.Size = UDim2.new(0.35, 0, 1, 0)
+    textoLabel.Position = UDim2.new(0.03, 0, 0, 0)
+    textoLabel.BackgroundTransparency = 1
+    textoLabel.Text = texto
+    textoLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    textoLabel.TextSize = 13
+    textoLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textoLabel.Font = Enum.Font.Gotham
+    textoLabel.Parent = frame
+    
+    local botao = Instance.new("TextButton")
+    botao.Size = UDim2.new(0.5, 0, 1, 0)
+    botao.Position = UDim2.new(0.45, 0, 0, 0)
+    botao.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    botao.Text = valorPadrao or opcoes[1]
+    botao.TextColor3 = Color3.fromRGB(200, 200, 200)
+    botao.TextSize = 13
+    botao.Font = Enum.Font.Gotham
+    botao.BorderSizePixel = 1
+    botao.BorderColor3 = Color3.fromRGB(60, 60, 60)
+    botao.Parent = frame
+    
+    local botaoCorner = Instance.new("UICorner")
+    botaoCorner.CornerRadius = UDim.new(0, 4)
+    botaoCorner.Parent = botao
+    
+    local indice = 1
+    
+    botao.MouseButton1Click:Connect(function()
+        indice = indice % #opcoes + 1
+        botao.Text = opcoes[indice]
+    end)
+    
+    return frame, function() return opcoes[indice] end
+end
 
-    <!-- botão central (simulação de ativação / status) -->
-    <button class="action-btn" id="actionBtn">
-        <i class="fas fa-play"></i> Aplicar configuração
-    </button>
+-- ============================================
+-- FUNÇÃO SLIDER
+-- ============================================
 
-    <!-- rodapé com indicador Silent + aimbot -->
-    <div class="silent-footer">
-        <span><i class="fas fa-shield-alt"></i> Silent ativo: </span>
-        <span id="silentStatusText" style="font-weight: 500; color: #c0d0e5;">desligado</span>
-        <span class="silent-dot inactive" id="silentDot"></span>
-        <span style="margin-left: 0.6rem;">|</span>
-        <span style="margin-left: 0.6rem;"><i class="fas fa-crosshairs"></i> Aimbot: <span id="aimbotStatusText" style="font-weight:500; color:#c0d0e5;">desligado</span></span>
-        <span class="silent-dot inactive" id="aimbotDot" style="margin-left: 4px;"></span>
-    </div>
-</div>
+local function criarSlider(parent, yPos, texto, min, max, valorPadrao)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 35)
+    frame.Position = UDim2.new(0, 0, 0, yPos)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+    
+    local textoLabel = Instance.new("TextLabel")
+    textoLabel.Size = UDim2.new(0.4, 0, 1, 0)
+    textoLabel.Position = UDim2.new(0.03, 0, 0, 0)
+    textoLabel.BackgroundTransparency = 1
+    textoLabel.Text = texto
+    textoLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    textoLabel.TextSize = 12
+    textoLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textoLabel.Font = Enum.Font.Gotham
+    textoLabel.Parent = frame
+    
+    local valorLabel = Instance.new("TextLabel")
+    valorLabel.Size = UDim2.new(0.1, 0, 1, 0)
+    valorLabel.Position = UDim2.new(0.87, 0, 0, 0)
+    valorLabel.BackgroundTransparency = 1
+    valorLabel.Text = tostring(valorPadrao)
+    valorLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    valorLabel.TextSize = 12
+    valorLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valorLabel.Font = Enum.Font.GothamBold
+    valorLabel.Parent = frame
+    
+    local sliderBg = Instance.new("Frame")
+    sliderBg.Size = UDim2.new(0.42, 0, 0, 4)
+    sliderBg.Position = UDim2.new(0.43, 0, 0.5, -2)
+    sliderBg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    sliderBg.BorderSizePixel = 0
+    sliderBg.Parent = frame
+    
+    local sliderCorner = Instance.new("UICorner")
+    sliderCorner.CornerRadius = UDim.new(1, 0)
+    sliderCorner.Parent = sliderBg
+    
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((valorPadrao - min) / (max - min), 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+    fill.BorderSizePixel = 0
+    fill.Parent = sliderBg
+    
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(1, 0)
+    fillCorner.Parent = fill
+    
+    local valor = valorPadrao or 0
+    local arrastando = false
+    
+    local function atualizarSlider(posX)
+        local relX = math.clamp((posX - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
+        valor = math.round(min + (max - min) * relX)
+        fill.Size = UDim2.new(relX, 0, 1, 0)
+        valorLabel.Text = tostring(valor)
+    end
+    
+    sliderBg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            arrastando = true
+            atualizarSlider(input.Position.X)
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and arrastando then
+            atualizarSlider(input.Position.X)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            arrastando = false
+        end
+    end)
+    
+    return frame, function() return valor end, function(novoValor)
+        valor = math.clamp(novoValor, min, max)
+        local relX = (valor - min) / (max - min)
+        fill.Size = UDim2.new(relX, 0, 1, 0)
+        valorLabel.Text = tostring(valor)
+    end
+end
 
-<script>
-    (function() {
-        "use strict";
+-- ============================================
+-- FUNÇÃO TÍTULO DE SEÇÃO
+-- ============================================
 
-        // --- elementos DOM ---
-        const aimbotToggle = document.getElementById('aimbotToggle');
-        const silentToggle = document.getElementById('silentToggle');
-        const actionBtn = document.getElementById('actionBtn');
+local function criarTitulo(parent, yPos, texto)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 25)
+    frame.Position = UDim2.new(0, 0, 0, yPos)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+    
+    local linha = Instance.new("Frame")
+    linha.Size = UDim2.new(0.03, 0, 1, 0)
+    linha.Position = UDim2.new(0.02, 0, 0, 0)
+    linha.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    linha.BorderSizePixel = 0
+    linha.Parent = frame
+    
+    local textoLabel = Instance.new("TextLabel")
+    textoLabel.Size = UDim2.new(0.85, 0, 1, 0)
+    textoLabel.Position = UDim2.new(0.08, 0, 0, 0)
+    textoLabel.BackgroundTransparency = 1
+    textoLabel.Text = texto
+    textoLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
+    textoLabel.TextSize = 13
+    textoLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textoLabel.Font = Enum.Font.GothamBold
+    textoLabel.Parent = frame
+    
+    return frame
+end
 
-        // textos e dots
-        const aimbotStatusText = document.getElementById('aimbotStatusText');
-        const silentStatusText = document.getElementById('silentStatusText');
-        const aimbotDot = document.getElementById('aimbotDot');
-        const silentDot = document.getElementById('silentDot');
+-- ============================================
+-- FUNÇÃO SEPARADOR
+-- ============================================
 
-        // estado interno
-        let aimbotEnabled = false;
-        let silentEnabled = false;
+local function criarSeparador(parent, yPos)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0.94, 0, 0, 1)
+    frame.Position = UDim2.new(0.03, 0, 0, yPos)
+    frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    frame.BorderSizePixel = 0
+    frame.Parent = parent
+    return frame
+end
 
-        // --- funções de atualização de UI ---
-        function updateUI() {
-            // Aimbot
-            if (aimbotEnabled) {
-                aimbotToggle.classList.add('active');
-                aimbotStatusText.textContent = 'ligado';
-                aimbotDot.className = 'silent-dot';  // ativo (cor padrão)
-            } else {
-                aimbotToggle.classList.remove('active');
-                aimbotStatusText.textContent = 'desligado';
-                aimbotDot.className = 'silent-dot inactive';
-            }
+-- ============================================
+-- CONSTRUINDO O MENU
+-- ============================================
 
-            // Silent
-            if (silentEnabled) {
-                silentToggle.classList.add('active');
-                silentStatusText.textContent = 'ligado';
-                silentDot.className = 'silent-dot';
-            } else {
-                silentToggle.classList.remove('active');
-                silentStatusText.textContent = 'desligado';
-                silentDot.className = 'silent-dot inactive';
-            }
+local y = 10
 
-            // Atualiza o botão com dica visual do estado (somente para feedback)
-            if (aimbotEnabled || silentEnabled) {
-                actionBtn.innerHTML = `<i class="fas fa-check-circle"></i> Configuração ativa`;
-                actionBtn.style.background = '#1a5c3a';
-                actionBtn.style.borderColor = '#2e9b5e';
-                actionBtn.style.boxShadow = '0 8px 0 #0f3d25, 0 4px 20px #1d4ed833';
-            } else {
-                actionBtn.innerHTML = `<i class="fas fa-play"></i> Aplicar configuração`;
-                actionBtn.style.background = '#1d4ed8';
-                actionBtn.style.borderColor = '#3d7eff88';
-                actionBtn.style.boxShadow = '0 8px 0 #0f2a6b, 0 4px 20px #1d4ed833';
-            }
-        }
+-- AIMBOT
+criarTitulo(container, y, "AIMBOT")
+y = y + 30
 
-        // --- alternar toggles (clique) ---
-        aimbotToggle.addEventListener('click', function(e) {
-            e.stopPropagation();
-            aimbotEnabled = !aimbotEnabled;
-            updateUI();
-        });
+local cb1, getAimbot = criarCheckbox(container, y, "Aimbot Ativo", true)
+y = y + 35
 
-        silentToggle.addEventListener('click', function(e) {
-            e.stopPropagation();
-            silentEnabled = !silentEnabled;
-            updateUI();
-        });
+local dd1, getKeybind = criarDropdown(container, y, "Botão de Ativação:", {"MouseButton1", "MouseButton2", "MouseButton3", "F", "R", "Shift", "Control", "Q", "E", "X", "Z", "C", "V"})
+y = y + 38
 
-        // atalho: tecla Enter/Space para acessibilidade (opcional)
-        aimbotToggle.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                aimbotToggle.click();
-            }
-        });
-        silentToggle.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                silentToggle.click();
-            }
-        });
+local cb2, getHead = criarCheckbox(container, y, "Mira na Cabeça", true)
+y = y + 35
 
-        // --- botão "Aplicar" (simula salvamento / ação) ---
-        actionBtn.addEventListener('click', function() {
-            // apenas feedback visual + notificação no console (simulação)
-            const aimbotState = aimbotEnabled ? 'ATIVADO' : 'desativado';
-            const silentState = silentEnabled ? 'ATIVADO' : 'desativado';
+local cb3, getVisible = criarCheckbox(container, y, "Checar Visibilidade", true)
+y = y + 35
 
-            // feedback tátil no botão (breve)
-            actionBtn.disabled = true;
-            actionBtn.innerHTML = `<i class="fas fa-spinner fa-pulse"></i> Aplicando...`;
-            setTimeout(() => {
-                actionBtn.disabled = false;
-                // restaura conforme estado atual
-                if (aimbotEnabled || silentEnabled) {
-                    actionBtn.innerHTML = `<i class="fas fa-check-circle"></i> Configuração ativa`;
-                } else {
-                    actionBtn.innerHTML = `<i class="fas fa-play"></i> Aplicar configuração`;
-                }
-                // exibe no console (simulação de log)
-                console.log(`[PAINEL] Aimbot: ${aimbotState} | Silent: ${silentState}`);
-                // (Opcional) pequeno alerta visual, mas sem alert() para não incomodar
-                // Mudamos o texto do rodapé temporariamente? 
-                // Vamos piscar o status.
-                const originalText = silentStatusText.textContent;
-                silentStatusText.style.transition = '0.1s';
-                silentStatusText.style.color = '#a0d0ff';
-                setTimeout(() => {
-                    silentStatusText.style.color = '#c0d0e5';
-                }, 300);
-            }, 400);
-        });
+local cb4, getTeam = criarCheckbox(container, y, "Não Mirar em Aliados", true)
+y = y + 35
 
-        // --- inicialização ---
-        // (ambos começam desligados)
-        updateUI();
+local cb5, getDrawFOV = criarCheckbox(container, y, "Desenhar FOV", true)
+y = y + 35
 
-        // pequeno detalhe: ao carregar, mostra que silent está inativo, aimbot inativo
-        console.log('Painel Aimbot + Silent carregado. Use os toggles e o botão "Aplicar".');
-    })();
-</script>
-</body>
-</html>
+criarSeparador(container, y)
+y = y + 15
+
+-- AJUSTES
+criarTitulo(container, y, "AJUSTES")
+y = y + 30
+
+local sl1, getFOV = criarSlider(container, y, "FOV:", 10, 360, 120)
+y = y + 40
+
+local sl2, getSmooth = criarSlider(container, y, "Suavidade:", 1, 20, 5)
+y = y + 40
+
+local sl3, getDist = criarSlider(container, y, "Distância Máxima:", 50, 1000, 500)
+y = y + 40
+
+criarSeparador(container, y)
+y = y + 15
+
+-- SILENT AIM
+criarTitulo(container, y, "SILENT AIM")
+y = y + 30
+
+local cb6, getSilent = criarCheckbox(container, y, "Silent Aim", false)
+y = y + 35
+
+criarSeparador(container, y)
+y = y + 15
+
+-- MAGIC BULLET
+criarTitulo(container, y, "MAGIC BULLET")
+y = y + 30
+
+local cb7, getMagicBullet = criarCheckbox(container, y, "Magic Bullet", false)
+y = y + 35
+
+local sl4, getPullStrength = criarSlider(container, y, "Força do Puxão:", 1, 100, 100)
+y = y + 40
+
+criarSeparador(container, y)
+y = y + 15
+
+-- TRIGGERBOT
+criarTitulo(container, y, "TRIGGERBOT")
+y = y + 30
+
+local cb8, getTrigger = criarCheckbox(container, y, "Triggerbot", false)
+y = y + 35
+
+criarSeparador(container, y)
+y = y + 15
+
+-- ESP
+criarTitulo(container, y, "ESP")
+y = y + 30
+
+local cb9, getESP = criarCheckbox(container, y, "ESP Ativo", false)
+y = y + 35
+
+local cb10, getESPBox = criarCheckbox(container, y, "ESP Box", true)
+y = y + 35
+
+local cb11, getESPName = criarCheckbox(container, y, "ESP Nomes", true)
+y = y + 35
+
+scroll.CanvasSize = UDim2.new(0, 0, 0, y + 50)
+
+-- ============================================
+-- FUNÇÃO FOV CIRCLE
+-- ============================================
+
+local function criarFOVCircle()
+    if fovCircle then fovCircle:Destroy() end
+    
+    local circle = Drawing.new("Circle")
+    circle.Visible = aimbotConfig.drawFOV
+    circle.Radius = aimbotConfig.fov
+    circle.Thickness = 1.5
+    circle.Color = Color3.fromRGB(150, 150, 150)
+    circle.Transparency = 0.4
+    circle.Filled = false
+    circle.NumSides = 30
+    circle.Position = Vector2.new(mouse.X, mouse.Y)
+    
+    fovCircle = circle
+    return circle
+end
+
+criarFOVCircle()
+
+-- ============================================
+-- FUNÇÕES DO AIMBOT
+-- ============================================
+
+local function getEnemies()
+    local enemies = {}
+    
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            local char = plr.Character
+            local humanoid = char:FindFirstChild("Humanoid")
+            
+            if humanoid.Health <= 0 then
+                continue
+            end
+            
+            if aimbotConfig.teamCheck and plr.Team == player.Team then
+                continue
+            end
+            
+            local targetPart = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+            if not targetPart then
+                continue
+            end
+            
+            local distance = (targetPart.Position - Camera.CFrame.Position).Magnitude
+            if distance > aimbotConfig.distance then
+                continue
+            end
+            
+            if aimbotConfig.checkVisible then
+                local ray = Ray.new(Camera.CFrame.Position, (targetPart.Position - Camera.CFrame.Position).Unit * distance)
+                local hit, position = Workspace:FindPartOnRay(ray, player.Character, false, true)
+                if hit and not hit:IsDescendantOf(char) then
+                    continue
+                end
+            end
+            
+            table.insert(enemies, {
+                player = plr,
+                character = char,
+                humanoid = humanoid,
+                part = targetPart,
+                distance = distance,
+                position = targetPart.Position,
+            })
+        end
+    end
+    
+    return enemies
+end
+
+local function getAngleToTarget(targetPosition)
+    local cameraPos = Camera.CFrame.Position
+    local direction = (targetPosition - cameraPos).Unit
+    local lookDirection = Camera.CFrame.LookVector
+    
+    local angle = math.acos(lookDirection:Dot(direction))
+    return math.deg(angle)
+end
+
+local function aimAt(targetPosition)
+    if not targetPosition then return end
+    
+    local cameraPos = Camera.CFrame.Position
+    local direction = (targetPosition - cameraPos).Unit
+    
+    if aimbotConfig.magicBullet then
+        local pull = aimbotConfig.pullStrength / 100
+        local randomOffset = Vector3.new(
+            (math.random() - 0.5) * (1 - pull) * 0.1,
+            (math.random() - 0.5) * (1 - pull) * 0.1,
+            (math.random() - 0.5) * (1 - pull) * 0.1
+        )
+        direction = (direction + randomOffset).Unit
+    end
+    
+    if aimbotConfig.smoothness > 1 then
+        local targetCFrame = CFrame.new(cameraPos, cameraPos + direction * 100)
+        local lerpFactor = 1 / aimbotConfig.smoothness
+        Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, lerpFactor)
+    else
+        Camera.CFrame = CFrame.new(cameraPos, cameraPos + direction * 100)
+    end
+end
+
+local function findBestTarget()
+    local enemies = getEnemies()
+    if #enemies == 0 then return nil end
+    
+    local bestTarget = nil
+    local bestScore = math.huge
+    
+    for _, enemy in ipairs(enemies) do
+        local angle = getAngleToTarget(enemy.position)
+        
+        if angle <= aimbotConfig.fov then
+            local score = enemy.distance + angle * 10
+            
+            if score < bestScore then
+                bestScore = score
+                bestTarget = enemy
+            end
+        end
+    end
+    
+    return bestTarget
+end
+
+-- ============================================
+-- ESP
+-- ============================================
+
+local function updateESP()
+    for _, espObj in pairs(espObjects) do
+        pcall(function() espObj:Destroy() end)
+    end
+    espObjects = {}
+    
+    if not aimbotConfig.esp then return end
+    
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            local char = plr.Character
+            local humanoid = char:FindFirstChild("Humanoid")
+            
+            if humanoid.Health <= 0 then continue end
+            if aimbotConfig.teamCheck and plr.Team == player.Team then continue end
+            
+            local root = char:FindFirstChild("HumanoidRootPart")
+            local head = char:FindFirstChild("Head")
+            if not root then continue end
+            
+            local pos, onScreen = Camera:WorldToScreenPoint(root.Position)
+            if not onScreen then continue end
+            
+            local headPos, headOnScreen = Camera:WorldToScreenPoint(head and head.Position or root.Position)
+            
+            local espBox = getESPBox()
+            local espName = getESPName()
+            
+            if espBox then
+                local dist = (root.Position - Camera.CFrame.Position).Magnitude
+                local size = math.clamp(250 / dist * 10, 20, 100)
+                
+                local box = Drawing.new("Square")
+                box.Size = Vector2.new(size, size * 1.3)
+                box.Position = Vector2.new(pos.X - size/2, headPos.Y - size * 0.7)
+                box.Color = Color3.fromRGB(150, 150, 150)
+                box.Thickness = 1.5
+                box.Visible = true
+                box.Filled = false
+                table.insert(espObjects, box)
+            end
+            
+            if espName then
+                local name = Drawing.new("Text")
+                name.Text = plr.Name
+                name.Position = Vector2.new(pos.X, headPos.Y - 60)
+                name.Color = Color3.fromRGB(200, 200, 200)
+                name.Size = 14
+                name.Center = true
+                name.Visible = true
+                table.insert(espObjects, name)
+            end
+        end
+    end
+end
+
+-- ============================================
+-- TRIGGERBOT
+-- ============================================
+
+local function triggerbot()
+    if not aimbotConfig.triggerbot then return end
+    if not target then return end
+    
+    local angle = getAngleToTarget(target.position)
+    if angle <= aimbotConfig.fov then
+        pcall(function()
+            mouse1click()
+        end)
+    end
+end
+
+-- ============================================
+-- LOOP PRINCIPAL
+-- ============================================
+
+local function updateAimbot()
+    aimbotConfig.enabled = getAimbot()
+    aimbotConfig.targetPart = getHead() and "Head" or "HumanoidRootPart"
+    aimbotConfig.drawFOV = getDrawFOV()
+    aimbotConfig.fov = getFOV()
+    aimbotConfig.smoothness = getSmooth()
+    aimbotConfig.distance = getDist()
+    aimbotConfig.teamCheck = getTeam()
+    aimbotConfig.checkVisible = getVisible()
+    aimbotConfig.silent = getSilent()
+    aimbotConfig.triggerbot = getTrigger()
+    aimbotConfig.esp = getESP()
+    aimbotConfig.magicBullet = getMagicBullet()
+    aimbotConfig.pullStrength = getPullStrength()
+    
+    local keybindStr = getKeybind()
+    aimbotConfig.keybind = keybindStr
+    
+    if fovCircle then
+        fovCircle.Position = Vector2.new(mouse.X, mouse.Y)
+        fovCircle.Radius = aimbotConfig.fov
+        fovCircle.Visible = aimbotConfig.drawFOV and aimbotConfig.enabled
+    end
+    
+    if aimbotConfig.enabled and keybindHeld then
+        local newTarget = findBestTarget()
+        
+        if newTarget then
+            if lockedTarget and lockedTarget.player == newTarget.player then
+                target = newTarget
+            else
+                target = newTarget
+                lockedTarget = target
+            end
+        else
+            target = nil
+            lockedTarget = nil
+        end
+        
+        if target then
+            local targetPos = target.part.Position
+            if aimbotConfig.targetPart == "Head" then
+                targetPos = targetPos + Vector3.new(0, 0.5, 0)
+            end
+            
+            if not aimbotConfig.silent then
+                aimAt(targetPos)
+            end
+            
+            triggerbot()
+        end
+    else
+        target = nil
+        lockedTarget = nil
+    end
+    
+    updateESP()
+end
+
+-- ============================================
+-- DETECTA O BOTÃO DE ATIVAÇÃO
+-- ============================================
+
+local function getKeyEnum(keyStr)
+    local keyMap = {
+        MouseButton1 = Enum.UserInputType.MouseButton1,
+        MouseButton2 = Enum.UserInputType.MouseButton2,
+        MouseButton3 = Enum.UserInputType.MouseButton3,
+        F = Enum.KeyCode.F,
+        R = Enum.KeyCode.R,
+        Shift = Enum.KeyCode.LeftShift,
+        Control = Enum.KeyCode.LeftControl,
+        Q = Enum.KeyCode.Q,
+        E = Enum.KeyCode.E,
+        X = Enum.KeyCode.X,
+        Z = Enum.KeyCode.Z,
+        C = Enum.KeyCode.C,
+        V = Enum.KeyCode.V,
+    }
+    return keyMap[keyStr] or Enum.UserInputType.MouseButton2
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    local currentKey = getKeybind()
+    local keyEnum = getKeyEnum(currentKey)
+    
+    if input.UserInputType == keyEnum or input.KeyCode == keyEnum then
+        keybindHeld = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    local currentKey = getKeybind()
+    local keyEnum = getKeyEnum(currentKey)
+    
+    if input.UserInputType == keyEnum or input.KeyCode == keyEnum then
+        keybindHeld = false
+    end
+end)
+
+-- ============================================
+-- ABRIR/FECHAR COM DELETE
+-- ============================================
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.Delete then
+        menu.Visible = not menu.Visible
+        if menu.Visible then
+            scroll.CanvasPosition = Vector2.new(0, 0)
+        end
+    end
+end)
+
+-- ============================================
+-- ARRASTAR MENU
+-- ============================================
+
+local arrastando = false
+local inicioArraste, posicaoInicial
+
+topBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        arrastando = true
+        inicioArraste = input.Position
+        posicaoInicial = menu.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement and arrastando then
+        local delta = input.Position - inicioArraste
+        menu.Position = UDim2.new(
+            posicaoInicial.X.Scale,
+            posicaoInicial.X.Offset + delta.X,
+            posicaoInicial.Y.Scale,
+            posicaoInicial.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        arrastando = false
+    end
+end)
+
+-- ============================================
+-- LOOP PRINCIPAL
+-- ============================================
+
+RunService.RenderStepped:Connect(function()
+    updateAimbot()
+end)
+
+-- ============================================
+-- ATUALIZA FOV QUANDO MOUSE MOVE
+-- ============================================
+
+UserInputService.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        if fovCircle then
+            fovCircle.Position = Vector2.new(input.Position.X, input.Position.Y)
+        end
+    end
+end)
+
+-- ============================================
+-- MENSAGEM FINAL
+-- ============================================
+
+print("✅ MENU + AIMBOT GRUDENTO CARREGADO!")
+print("📌 Aperte DELETE para abrir/fechar")
+print("🎯 Segure o botão configurado para ativar o aimbot")
+print("⚙️ Configure tudo no menu!")
