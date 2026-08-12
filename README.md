@@ -1,5 +1,5 @@
 -- ============================================
--- 🎯 MENU PRETO E CINZA + AIMBOT GRUDENTO
+-- 🎯 MENU PRETO/CINZA + AIMBOT GRUDENTO + MAGIC BULLET
 -- ============================================
 -- 📌 Aperte DELETE para abrir/fechar o menu
 -- ============================================
@@ -14,6 +14,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Camera = Workspace.CurrentCamera
 local TweenService = game:GetService("TweenService")
+local VirtualUser = game:GetService("VirtualUser")
 
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
@@ -35,16 +36,20 @@ local aimbotConfig = {
     silent = false,
     triggerbot = false,
     esp = false,
+    magicBullet = false,
+    pullStrength = 100, -- Força do puxão (0-100)
+    keybind = "MouseButton2", -- Botão padrão: botão direito do mouse
 }
 
 -- ============================================
--- VARIÁVEIS DO AIMBOT
+-- VARIÁVEIS
 -- ============================================
 
 local target = nil
 local lockedTarget = nil
 local fovCircle = nil
 local espObjects = {}
+local keybindHeld = false
 
 -- ============================================
 -- CRIA A GUI
@@ -60,8 +65,8 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 -- ============================================
 
 local menu = Instance.new("Frame")
-menu.Size = UDim2.new(0, 400, 0, 500)
-menu.Position = UDim2.new(0.5, -200, 0.5, -250)
+menu.Size = UDim2.new(0, 420, 0, 520)
+menu.Position = UDim2.new(0.5, -210, 0.5, -260)
 menu.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 menu.BackgroundTransparency = 0.05
 menu.BorderSizePixel = 1
@@ -87,24 +92,22 @@ local topCorner = Instance.new("UICorner")
 topCorner.CornerRadius = UDim.new(0, 12)
 topCorner.Parent = topBar
 
--- Título
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0.6, 0, 1, 0)
 title.Position = UDim2.new(0.05, 0, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "🎯 AIMBOT"
+title.Text = "🎯 AIMBOT ARABE"
 title.TextColor3 = Color3.fromRGB(220, 220, 220)
 title.TextSize = 18
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Font = Enum.Font.GothamBold
 title.Parent = topBar
 
--- Versão
 local version = Instance.new("TextLabel")
 version.Size = UDim2.new(0.3, 0, 1, 0)
 version.Position = UDim2.new(0.65, 0, 0, 0)
 version.BackgroundTransparency = 1
-version.Text = "v2.0"
+version.Text = "v3.0"
 version.TextColor3 = Color3.fromRGB(120, 120, 120)
 version.TextSize = 12
 version.TextXAlignment = Enum.TextXAlignment.Right
@@ -151,14 +154,14 @@ scroll.Size = UDim2.new(1, 0, 1, -45)
 scroll.Position = UDim2.new(0, 0, 0, 45)
 scroll.BackgroundTransparency = 1
 scroll.BorderSizePixel = 0
-scroll.CanvasSize = UDim2.new(0, 0, 0, 800)
+scroll.CanvasSize = UDim2.new(0, 0, 0, 900)
 scroll.ScrollBarThickness = 4
 scroll.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
 scroll.ScrollBarImageTransparency = 0.5
 scroll.Parent = menu
 
 local container = Instance.new("Frame")
-container.Size = UDim2.new(1, 0, 0, 750)
+container.Size = UDim2.new(1, 0, 0, 850)
 container.BackgroundTransparency = 1
 container.Parent = scroll
 
@@ -226,6 +229,54 @@ local function criarCheckbox(parent, yPos, texto, estadoInicial)
         estado = novoEstado
         checkMark.Visible = estado
     end
+end
+
+-- ============================================
+-- FUNÇÃO DROPDOWN (pra escolher o botão)
+-- ============================================
+
+local function criarDropdown(parent, yPos, texto, opcoes, valorPadrao)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 32)
+    frame.Position = UDim2.new(0, 0, 0, yPos)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+    
+    local textoLabel = Instance.new("TextLabel")
+    textoLabel.Size = UDim2.new(0.35, 0, 1, 0)
+    textoLabel.Position = UDim2.new(0.03, 0, 0, 0)
+    textoLabel.BackgroundTransparency = 1
+    textoLabel.Text = texto
+    textoLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    textoLabel.TextSize = 13
+    textoLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textoLabel.Font = Enum.Font.Gotham
+    textoLabel.Parent = frame
+    
+    local botao = Instance.new("TextButton")
+    botao.Size = UDim2.new(0.5, 0, 1, 0)
+    botao.Position = UDim2.new(0.45, 0, 0, 0)
+    botao.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    botao.Text = valorPadrao or opcoes[1]
+    botao.TextColor3 = Color3.fromRGB(200, 200, 200)
+    botao.TextSize = 13
+    botao.Font = Enum.Font.Gotham
+    botao.BorderSizePixel = 1
+    botao.BorderColor3 = Color3.fromRGB(60, 60, 60)
+    botao.Parent = frame
+    
+    local botaoCorner = Instance.new("UICorner")
+    botaoCorner.CornerRadius = UDim.new(0, 4)
+    botaoCorner.Parent = botao
+    
+    local indice = 1
+    
+    botao.MouseButton1Click:Connect(function()
+        indice = indice % #opcoes + 1
+        botao.Text = opcoes[indice]
+    end)
+    
+    return frame, function() return opcoes[indice] end
 end
 
 -- ============================================
@@ -371,13 +422,16 @@ end
 
 local y = 10
 
--- Título Aimbot
+-- ====== AIMBOT ======
 criarTitulo(container, y, "AIMBOT")
 y = y + 30
 
--- Checkboxes Aimbot
 local cb1, getAimbot = criarCheckbox(container, y, "Aimbot Ativo", true)
 y = y + 35
+
+-- DROPDOWN DO BOTÃO (ao lado do nome)
+local dd1, getKeybind = criarDropdown(container, y, "Botão de Ativação:", {"MouseButton1", "MouseButton2", "MouseButton3", "F", "R", "Shift", "Control", "Q", "E", "X", "Z", "C", "V"})
+y = y + 38
 
 local cb2, getHead = criarCheckbox(container, y, "Mira na Cabeça", true)
 y = y + 35
@@ -391,11 +445,10 @@ y = y + 35
 local cb5, getDrawFOV = criarCheckbox(container, y, "Desenhar FOV", true)
 y = y + 35
 
--- Separador
 criarSeparador(container, y)
 y = y + 15
 
--- Sliders Aimbot
+-- ====== AJUSTES ======
 criarTitulo(container, y, "AJUSTES")
 y = y + 30
 
@@ -408,46 +461,53 @@ y = y + 40
 local sl3, getDist = criarSlider(container, y, "Distância Máxima:", 50, 1000, 500)
 y = y + 40
 
--- Separador
 criarSeparador(container, y)
 y = y + 15
 
--- Silent Aim
+-- ====== SILENT AIM ======
 criarTitulo(container, y, "SILENT AIM")
 y = y + 30
 
 local cb6, getSilent = criarCheckbox(container, y, "Silent Aim", false)
 y = y + 35
 
--- Separador
+-- ====== MAGIC BULLET ======
+criarTitulo(container, y, "MAGIC BULLET")
+y = y + 30
+
+local cb7, getMagicBullet = criarCheckbox(container, y, "Magic Bullet", false)
+y = y + 35
+
+local sl4, getPullStrength = criarSlider(container, y, "Força do Puxão:", 1, 100, 100)
+y = y + 40
+
 criarSeparador(container, y)
 y = y + 15
 
--- Triggerbot
+-- ====== TRIGGERBOT ======
 criarTitulo(container, y, "TRIGGERBOT")
 y = y + 30
 
-local cb7, getTrigger = criarCheckbox(container, y, "Triggerbot", false)
+local cb8, getTrigger = criarCheckbox(container, y, "Triggerbot", false)
 y = y + 35
 
--- Separador
 criarSeparador(container, y)
 y = y + 15
 
--- ESP
+-- ====== ESP ======
 criarTitulo(container, y, "ESP")
 y = y + 30
 
-local cb8, getESP = criarCheckbox(container, y, "ESP Ativo", false)
+local cb9, getESP = criarCheckbox(container, y, "ESP Ativo", false)
 y = y + 35
 
-local cb9, getESPBox = criarCheckbox(container, y, "ESP Box", false)
+local cb10, getESPBox = criarCheckbox(container, y, "ESP Box", true)
 y = y + 35
 
-local cb10, getESPName = criarCheckbox(container, y, "ESP Nomes", true)
+local cb11, getESPName = criarCheckbox(container, y, "ESP Nomes", true)
 y = y + 35
 
--- Atualiza o tamanho do canvas
+-- Atualiza o canvas
 scroll.CanvasSize = UDim2.new(0, 0, 0, y + 50)
 
 -- ============================================
@@ -474,7 +534,7 @@ end
 criarFOVCircle()
 
 -- ============================================
--- FUNÇÕES DO AIMBOT
+-- FUNÇÕES DO AIMBOT (GRUDENTO)
 -- ============================================
 
 local function getEnemies()
@@ -485,7 +545,7 @@ local function getEnemies()
             local char = plr.Character
             local humanoid = char:FindFirstChild("Humanoid")
             
-            if aimbotConfig.checkAlive and humanoid.Health <= 0 then
+            if humanoid.Health <= 0 then
                 continue
             end
             
@@ -534,18 +594,34 @@ local function getAngleToTarget(targetPosition)
     return math.deg(angle)
 end
 
+-- ============================================
+-- AIMBOT GRUDENTO (MUITO FORTE)
+-- ============================================
+
 local function aimAt(targetPosition)
     if not targetPosition then return end
     
     local cameraPos = Camera.CFrame.Position
     local direction = (targetPosition - cameraPos).Unit
     
+    -- Se Magic Bullet estiver ativo, adiciona o puxão
+    if aimbotConfig.magicBullet then
+        local pull = aimbotConfig.pullStrength / 100
+        -- Aplica o puxão no vetor de direção
+        local randomOffset = Vector3.new(
+            (math.random() - 0.5) * (1 - pull) * 0.1,
+            (math.random() - 0.5) * (1 - pull) * 0.1,
+            (math.random() - 0.5) * (1 - pull) * 0.1
+        )
+        direction = (direction + randomOffset).Unit
+    end
+    
     if aimbotConfig.smoothness > 1 then
-        local targetCFrame = CFrame.new(cameraPos, targetPosition)
+        local targetCFrame = CFrame.new(cameraPos, cameraPos + direction * 100)
         local lerpFactor = 1 / aimbotConfig.smoothness
         Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, lerpFactor)
     else
-        Camera.CFrame = CFrame.new(cameraPos, targetPosition)
+        Camera.CFrame = CFrame.new(cameraPos, cameraPos + direction * 100)
     end
 end
 
@@ -573,7 +649,112 @@ local function findBestTarget()
 end
 
 -- ============================================
--- LOOP PRINCIPAL DO AIMBOT
+-- FUNÇÃO DO MAGIC BULLET
+-- ============================================
+
+local function magicBullet(targetPos)
+    if not targetPos then return end
+    
+    local cameraPos = Camera.CFrame.Position
+    local direction = (targetPos - cameraPos).Unit
+    
+    -- Aplica o puxão baseado no slider
+    local pull = aimbotConfig.pullStrength / 100
+    local bulletOffset = Vector3.new(
+        (math.random() - 0.5) * (1 - pull) * 0.5,
+        (math.random() - 0.5) * (1 - pull) * 0.5,
+        (math.random() - 0.5) * (1 - pull) * 0.5
+    )
+    
+    local finalDirection = (direction + bulletOffset).Unit
+    Camera.CFrame = CFrame.new(cameraPos, cameraPos + finalDirection * 100)
+end
+
+-- ============================================
+-- ESP (CONSERTADO)
+-- ============================================
+
+local function updateESP()
+    -- Limpa ESP antigo
+    for _, espObj in pairs(espObjects) do
+        pcall(function() espObj:Destroy() end)
+    end
+    espObjects = {}
+    
+    if not aimbotConfig.esp then return end
+    
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            local char = plr.Character
+            local humanoid = char:FindFirstChild("Humanoid")
+            
+            if humanoid.Health <= 0 then continue end
+            if aimbotConfig.teamCheck and plr.Team == player.Team then continue end
+            
+            local root = char:FindFirstChild("HumanoidRootPart")
+            local head = char:FindFirstChild("Head")
+            if not root then continue end
+            
+            local pos, onScreen = Camera:WorldToScreenPoint(root.Position)
+            if not onScreen then continue end
+            
+            local headPos, headOnScreen = Camera:WorldToScreenPoint(head and head.Position or root.Position)
+            
+            local espBox = getESPBox()
+            local espName = getESPName()
+            
+            if espBox then
+                -- Calcula o tamanho da box baseado na distância
+                local dist = (root.Position - Camera.CFrame.Position).Magnitude
+                local size = math.clamp(250 / dist * 10, 20, 100)
+                
+                local box = Drawing.new("Square")
+                box.Size = Vector2.new(size, size * 1.3)
+                box.Position = Vector2.new(pos.X - size/2, headPos.Y - size * 0.7)
+                box.Color = Color3.fromRGB(150, 150, 150)
+                box.Thickness = 1.5
+                box.Visible = true
+                box.Filled = false
+                table.insert(espObjects, box)
+            end
+            
+            if espName then
+                local name = Drawing.new("Text")
+                name.Text = plr.Name
+                name.Position = Vector2.new(pos.X, headPos.Y - 60)
+                name.Color = Color3.fromRGB(200, 200, 200)
+                name.Size = 14
+                name.Center = true
+                name.Visible = true
+                table.insert(espObjects, name)
+            end
+        end
+    end
+end
+
+-- ============================================
+-- FUNÇÃO TRIGGERBOT
+-- ============================================
+
+local function triggerbot()
+    if not aimbotConfig.triggerbot then return end
+    if not target then return end
+    
+    -- Verifica se o alvo está dentro do FOV
+    local angle = getAngleToTarget(target.position)
+    if angle <= aimbotConfig.fov then
+        mouse1click()
+    end
+end
+
+local function mouse1click()
+    pcall(function()
+        mouse1buttonclick()
+    end)
+end
+
+-- ============================================
+-- LOOP PRINCIPAL
 -- ============================================
 
 local function updateAimbot()
@@ -589,6 +770,12 @@ local function updateAimbot()
     aimbotConfig.silent = getSilent()
     aimbotConfig.triggerbot = getTrigger()
     aimbotConfig.esp = getESP()
+    aimbotConfig.magicBullet = getMagicBullet()
+    aimbotConfig.pullStrength = getPullStrength()
+    
+    -- Atualiza o keybind
+    local keybindStr = getKeybind()
+    aimbotConfig.keybind = keybindStr
     
     -- Atualiza FOV
     if fovCircle then
@@ -597,8 +784,8 @@ local function updateAimbot()
         fovCircle.Visible = aimbotConfig.drawFOV and aimbotConfig.enabled
     end
     
-    -- Aimbot
-    if aimbotConfig.enabled then
+    -- Aimbot (só se o botão estiver pressionado)
+    if aimbotConfig.enabled and keybindHeld then
         local newTarget = findBestTarget()
         
         if newTarget then
@@ -619,92 +806,72 @@ local function updateAimbot()
                 targetPos = targetPos + Vector3.new(0, 0.5, 0)
             end
             
-            -- Se Silent Aim estiver ativo, não mexe na câmera
-            if not aimbotConfig.silent then
+            -- Magic Bullet
+            if aimbotConfig.magicBullet then
+                magicBullet(targetPos)
+            elseif not aimbotConfig.silent then
                 aimAt(targetPos)
             end
             
             -- Triggerbot
-            if aimbotConfig.triggerbot then
-                mouse1click()
-            end
+            triggerbot()
         end
-    end
-    
-    -- ESP
-    if aimbotConfig.esp then
-        updateESP()
     else
-        clearESP()
+        -- Se o botão não estiver pressionado, não faz nada
+        target = nil
+        lockedTarget = nil
     end
-end
-
--- ============================================
--- FUNÇÕES ESP
--- ============================================
-
-local function updateESP()
-    for _, espObj in pairs(espObjects) do
-        espObj:Destroy()
-    end
-    espObjects = {}
     
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= player and plr.Character and plr.Character:FindFirstChild("Humanoid") then
-            local char = plr.Character
-            local humanoid = char:FindFirstChild("Humanoid")
-            
-            if humanoid.Health <= 0 then continue end
-            if aimbotConfig.teamCheck and plr.Team == player.Team then continue end
-            
-            local root = char:FindFirstChild("HumanoidRootPart")
-            if not root then continue end
-            
-            local pos, onScreen = Camera:WorldToScreenPoint(root.Position)
-            if not onScreen then continue end
-            
-            local espBox = getESPBox()
-            local espName = getESPName()
-            
-            if espBox then
-                local box = Drawing.new("Square")
-                box.Size = Vector2.new(60, 80)
-                box.Position = Vector2.new(pos.X - 30, pos.Y - 40)
-                box.Color = Color3.fromRGB(150, 150, 150)
-                box.Thickness = 1.5
-                box.Visible = true
-                box.Filled = false
-                table.insert(espObjects, box)
-            end
-            
-            if espName then
-                local name = Drawing.new("Text")
-                name.Text = plr.Name
-                name.Position = Vector2.new(pos.X - 30, pos.Y - 45)
-                name.Color = Color3.fromRGB(200, 200, 200)
-                name.Size = 12
-                name.Center = true
-                name.Visible = true
-                table.insert(espObjects, name)
-            end
-        end
-    end
-end
-
-local function clearESP()
-    for _, espObj in pairs(espObjects) do
-        espObj:Destroy()
-    end
-    espObjects = {}
+    -- ESP (roda sempre)
+    updateESP()
 end
 
 -- ============================================
--- FUNÇÃO TRIGGERBOT
+-- DETECTA O BOTÃO DE ATIVAÇÃO
 -- ============================================
 
-local function mouse1click()
-    mouse1buttonclick()
+-- Função para converter string do dropdown para Enum
+local function getKeyEnum(keyStr)
+    local keyMap = {
+        MouseButton1 = Enum.UserInputType.MouseButton1,
+        MouseButton2 = Enum.UserInputType.MouseButton2,
+        MouseButton3 = Enum.UserInputType.MouseButton3,
+        F = Enum.KeyCode.F,
+        R = Enum.KeyCode.R,
+        Shift = Enum.KeyCode.LeftShift,
+        Control = Enum.KeyCode.LeftControl,
+        Q = Enum.KeyCode.Q,
+        E = Enum.KeyCode.E,
+        X = Enum.KeyCode.X,
+        Z = Enum.KeyCode.Z,
+        C = Enum.KeyCode.C,
+        V = Enum.KeyCode.V,
+    }
+    return keyMap[keyStr] or Enum.UserInputType.MouseButton2
 end
+
+-- Detecta quando o botão é pressionado
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    local currentKey = getKeybind()
+    local keyEnum = getKeyEnum(currentKey)
+    
+    if input.UserInputType == keyEnum or input.KeyCode == keyEnum then
+        keybindHeld = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    local currentKey = getKeybind()
+    local keyEnum = getKeyEnum(currentKey)
+    
+    if input.UserInputType == keyEnum or input.KeyCode == keyEnum then
+        keybindHeld = false
+    end
+end)
 
 -- ============================================
 -- LOOP PRINCIPAL
@@ -732,74 +899,4 @@ end)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.Delete then
-        menu.Visible = not menu.Visible
-        if menu.Visible then
-            scroll.CanvasPosition = Vector2.new(0, 0)
-        end
-    end
-end)
-
--- ============================================
--- ARRASTAR MENU
--- ============================================
-
-local arrastando = false
-local inicioArraste, posicaoInicial
-
-topBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        arrastando = true
-        inicioArraste = input.Position
-        posicaoInicial = menu.Position
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement and arrastando then
-        local delta = input.Position - inicioArraste
-        menu.Position = UDim2.new(
-            posicaoInicial.X.Scale,
-            posicaoInicial.X.Offset + delta.X,
-            posicaoInicial.Y.Scale,
-            posicaoInicial.Y.Offset + delta.Y
-        )
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        arrastando = false
-    end
-end)
-
--- ============================================
--- FUNÇÃO PARA PEGAR TODOS OS VALORES
--- ============================================
-
-function GetMenuValues()
-    return {
-        aimbot = getAimbot(),
-        head = getHead(),
-        visible = getVisible(),
-        team = getTeam(),
-        drawFOV = getDrawFOV(),
-        fov = getFOV(),
-        smooth = getSmooth(),
-        distance = getDist(),
-        silent = getSilent(),
-        trigger = getTrigger(),
-        esp = getESP(),
-        espBox = getESPBox(),
-        espName = getESPName(),
-    }
-end
-
--- ============================================
--- MENSAGEM FINAL
--- ============================================
-
-print("✅ MENU PRETO/CINZA + AIMBOT CARREGADO!")
-print("📌 Aperte DELETE para abrir/fechar")
-print("🎯 Aimbot grudento ativado!")
-print("⚙️ Ajuste as configurações no menu")
+    if input.KeyCode == Enum.Key
